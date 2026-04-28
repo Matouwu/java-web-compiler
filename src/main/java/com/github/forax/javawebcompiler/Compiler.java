@@ -12,7 +12,7 @@ import java.util.Objects;
 
 public class Compiler {
   private Compiler(){
-      throw new AssertionError("no instances");
+    throw new AssertionError("no instances");
   }
   record Diagnostic(long line, long column, String message) {}
   private record CompilerResult(boolean success, DiagnosticCollector<Object> diagnostics, MemoryClassLoader loader) {}
@@ -23,12 +23,12 @@ public class Compiler {
   }
 
   // Package private for testing
-  static List<Diagnostic> compileInMemory(String className, String sourceCode, MemoryClassLoader loader) {
-    var compileResult = compileTask(className, sourceCode, loader);
+  static List<Diagnostic> compileInMemory(String className, String sourceCode, MemoryClassLoader loader, Runtime.Version numberVersion) {
+    var compileResult = compileTask(className, sourceCode, loader, numberVersion);
     return compilationResultHandler(compileResult);
   }
 
-  private static CompilerResult compileTask (String className, String sourceCode, MemoryClassLoader loader){
+  private static CompilerResult compileTask (String className, String sourceCode, MemoryClassLoader loader, Runtime.Version numberVersion){
     var compiler = ToolProvider.getSystemJavaCompiler();
     if(compiler == null){
       throw new IllegalStateException("Compiler not available");
@@ -39,14 +39,18 @@ public class Compiler {
     var file = new SimpleJavaFileObject(
             URI.create("string:///" + className.replace('.', '/') + JavaFileObject.Kind.SOURCE.extension),
             JavaFileObject.Kind.SOURCE) {
-        @Override
-        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
-            return sourceCode;
-        }
+      @Override
+      public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+        return sourceCode;
+      }
     };
-
+    List<String> options = null;
+    var version = numberVersion.feature();
+    if (version != 25){
+      options = List.of("--release", Integer.toString(version));
+    }
     var compilationUnits = List.of(file);
-    var task = compiler.getTask(null, fileManager, diagnostics, null, null, compilationUnits);
+    var task = compiler.getTask(null, fileManager, diagnostics, options, null, compilationUnits);
 
     var success = task.call();
     return new CompilerResult(success, diagnostics, loader);

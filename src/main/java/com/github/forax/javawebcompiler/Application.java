@@ -22,6 +22,8 @@ public class Application {
     app.use(JExpress.staticFiles(Path.of("public")));
     var objectMapper = new ObjectMapper();
 
+    var runtimeVersion = Runtime.Version.parse("25");
+
     app.post("/compile", (req, res) -> {
       try {
         var body = req.bodyText();
@@ -29,7 +31,7 @@ public class Application {
         var sourceCode = compileRequest.code();
         var className = classNameExtractor(sourceCode);
         var newLoader = new MemoryClassLoader();
-        var diagnostics = Compiler.compileInMemory(className, sourceCode, newLoader);
+        var diagnostics = Compiler.compileInMemory(className, sourceCode, newLoader, runtimeVersion);
 
         res.send(objectMapper.writeValueAsString(diagnostics));
       } catch (Exception e) {
@@ -46,7 +48,7 @@ public class Application {
         var sourceCode = compileRequest.code();
         var className = classNameExtractor(sourceCode);
         var newLoader = new MemoryClassLoader();
-        var diagnostics = Compiler.compileInMemory(className, sourceCode, newLoader);
+        var diagnostics = Compiler.compileInMemory(className, sourceCode, newLoader, runtimeVersion);
         if (!diagnostics.isEmpty()) {
           throw new Error("TODO Marko");
         }
